@@ -1,4 +1,4 @@
-module github.com/Rakshit-gen/Gateway-be
+module gateway
 
 go 1.21
 
