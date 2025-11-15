@@ -1,0 +1,28 @@
+/bin/
+/build/
+/dist/
+*.exe
+*.test
+*.out
+*.log
+
+# Go build cache & modules
+/go.sum-e
+/go.work
+/go.work.sum
+vendor/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS crap
+.DS_Store
+Thumbs.db
