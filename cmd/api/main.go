@@ -81,6 +81,12 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message":"Apex Gateway API","version":"1.0","endpoints":{"health":"/health","admin":"/admin/*","docs":"https://github.com/your-repo"}}`))
+	})
+
 	clerkAuth := middleware.NewClerkAuth(cfg.ClerkJWKSURL)
 
 	r.Route("/admin", func(r chi.Router) {
