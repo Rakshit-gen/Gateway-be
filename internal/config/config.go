@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,12 +21,43 @@ type Config struct {
 }
 
 func Load() *Config {
+	// Support multiple origins - comma-separated list or single origin
+	frontendURL := getEnv("FRONTEND_URL", "http://localhost:3000")
+	allowedOriginsEnv := getEnv("ALLOWED_ORIGINS", "")
+	
+	var allowedOrigins []string
+	if allowedOriginsEnv != "" {
+		// Parse comma-separated origins
+		origins := strings.Split(allowedOriginsEnv, ",")
+		for _, origin := range origins {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				allowedOrigins = append(allowedOrigins, origin)
+			}
+		}
+	} else {
+		// Fallback to FRONTEND_URL (single origin)
+		allowedOrigins = []string{frontendURL}
+	}
+	
+	// Always include localhost for local development
+	hasLocalhost := false
+	for _, origin := range allowedOrigins {
+		if strings.Contains(origin, "localhost") {
+			hasLocalhost = true
+			break
+		}
+	}
+	if !hasLocalhost {
+		allowedOrigins = append(allowedOrigins, "http://localhost:3000")
+	}
+
 	return &Config{
 		Port:         getEnv("PORT", "8080"),
 		DatabaseURL:  getEnv("DATABASE_URL", ""),
 		RedisURL:     getEnv("REDIS_URL", ""),
 		RedisToken:   getEnv("REDIS_TOKEN", ""),
-		AllowOrigins: []string{getEnv("FRONTEND_URL", "http://localhost:3000")},
+		AllowOrigins: allowedOrigins,
 		ClerkJWKSURL: getEnv("CLERK_JWKS_URL", ""),
 	}
 }

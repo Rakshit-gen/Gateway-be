@@ -112,6 +112,8 @@ func main() {
 		r.Get("/analytics/stream", analyticsHandler.StreamMetrics)
 	})
 
+	// Proxy routes - catch-all for API proxying (requires API key)
+	// This must be last to not override specific routes
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.APIKeyAuth(apiKeyService))
 		r.Use(middleware.RateLimiting(rateLimiter))
