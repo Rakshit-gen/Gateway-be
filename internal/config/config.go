@@ -31,16 +31,19 @@ func Load() *Config {
 		origins := strings.Split(allowedOriginsEnv, ",")
 		for _, origin := range origins {
 			origin = strings.TrimSpace(origin)
+			// Remove trailing slashes from origins (CORS origins should not have trailing slashes)
+			origin = strings.TrimSuffix(origin, "/")
 			if origin != "" {
 				allowedOrigins = append(allowedOrigins, origin)
 			}
 		}
 	} else {
 		// Fallback to FRONTEND_URL (single origin)
+		frontendURL = strings.TrimSuffix(frontendURL, "/")
 		allowedOrigins = []string{frontendURL}
 	}
 	
-	// Always include localhost for local development
+	// Always include localhost for local development (if not in production)
 	hasLocalhost := false
 	for _, origin := range allowedOrigins {
 		if strings.Contains(origin, "localhost") {
@@ -48,7 +51,8 @@ func Load() *Config {
 			break
 		}
 	}
-	if !hasLocalhost {
+	// Only add localhost if we're not in a production-only environment
+	if !hasLocalhost && !strings.Contains(strings.Join(allowedOrigins, ","), "vercel.app") {
 		allowedOrigins = append(allowedOrigins, "http://localhost:3000")
 	}
 

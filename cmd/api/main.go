@@ -66,6 +66,9 @@ func main() {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 
+	// Log allowed origins for debugging (remove in production if needed)
+	log.Printf("CORS Allowed Origins: %v", cfg.AllowOrigins)
+	
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
