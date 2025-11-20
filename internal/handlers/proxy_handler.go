@@ -114,14 +114,17 @@ func (h *ProxyHandler) Forward(w http.ResponseWriter, r *http.Request) {
 
 func (h *ProxyHandler) trackEvent(routeID *int64, apiKey *models.APIKey, statusCode int, startTime time.Time, cacheHit bool, ipAddr string) {
 	var apiKeyID *int64
+	var userID string
 	if apiKey != nil {
 		apiKeyID = &apiKey.ID
+		userID = apiKey.UserID
 	}
 
 	event := &models.AnalyticsEvent{
 		Timestamp:  time.Now(),
 		RouteID:    routeID,
 		APIKeyID:   apiKeyID,
+		UserID:     userID,
 		StatusCode: statusCode,
 		LatencyMs:  time.Since(startTime).Milliseconds(),
 		CacheHit:   cacheHit,

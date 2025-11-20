@@ -11,6 +11,7 @@ type Route struct {
 	LoadBalancingStrategy  string    `json:"load_balancing_strategy"`
 	TimeoutMs              int       `json:"timeout_ms"`
 	RetryCount             int       `json:"retry_count"`
+	UserID                 string    `json:"user_id"`
 	CreatedAt              time.Time `json:"created_at"`
 }
 
@@ -21,6 +22,7 @@ type APIKey struct {
 	Tier         string    `json:"tier"`
 	RateLimitRPM int       `json:"rate_limit_rpm"`
 	Enabled      bool      `json:"enabled"`
+	UserID       string    `json:"user_id"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -30,6 +32,7 @@ type CacheRule struct {
 	TTLSeconds      int    `json:"ttl_seconds"`
 	CacheKeyPattern string `json:"cache_key_pattern"`
 	Enabled         bool   `json:"enabled"`
+	UserID          string `json:"user_id"`
 }
 
 type AnalyticsEvent struct {
@@ -37,6 +40,7 @@ type AnalyticsEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 	RouteID   *int64    `json:"route_id"`
 	APIKeyID  *int64    `json:"api_key_id"`
+	UserID    string    `json:"user_id"`
 	StatusCode int      `json:"status_code"`
 	LatencyMs int64     `json:"latency_ms"`
 	CacheHit  bool      `json:"cache_hit"`

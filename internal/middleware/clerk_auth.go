@@ -37,10 +37,13 @@ type JWK struct {
 	E   string `json:"e"`
 }
 
-func NewClerkAuth() *ClerkAuth {
+func NewClerkAuth(jwksURL string) *ClerkAuth {
+	if jwksURL == "" {
+		jwksURL = "https://clerk.your-domain.com/.well-known/jwks.json"
+	}
 	ca := &ClerkAuth{
 		publicKeys: make(map[string]*rsa.PublicKey),
-		jwksURL:    "https://clerk.your-domain.com/.well-known/jwks.json",
+		jwksURL:    jwksURL,
 	}
 	go ca.refreshKeys()
 	return ca

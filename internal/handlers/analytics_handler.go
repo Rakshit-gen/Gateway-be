@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gateway/internal/analytics"
+	"gateway/internal/middleware"
 	"net/http"
 	"time"
 )
@@ -17,6 +18,12 @@ func NewAnalyticsHandler(analytics *analytics.Analytics) *AnalyticsHandler {
 }
 
 func (h *AnalyticsHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	startStr := r.URL.Query().Get("start")
 	endStr := r.URL.Query().Get("end")
 
@@ -43,7 +50,7 @@ func (h *AnalyticsHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		endTime = time.Now()
 	}
 
-	metrics, err := h.analytics.GetMetrics(r.Context(), startTime, endTime)
+	metrics, err := h.analytics.GetMetrics(r.Context(), userID, startTime, endTime)
 	if err != nil {
 		http.Error(w, `{"error":"failed to get metrics"}`, http.StatusInternalServerError)
 		return
@@ -73,7 +80,11 @@ func (h *AnalyticsHandler) StreamMetrics(w http.ResponseWriter, r *http.Request)
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			metrics, err := h.analytics.GetRealtimeMetrics(r.Context())
+			userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+			if !ok || userID == "" {
+				continue
+			}
+			metrics, err := h.analytics.GetRealtimeMetrics(r.Context(), userID)
 			if err != nil {
 				continue
 			}

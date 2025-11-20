@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"gateway/internal/middleware"
 	"gateway/internal/models"
 	"gateway/internal/services"
 	"net/http"
@@ -23,13 +24,19 @@ func NewCacheRuleHandler(service *services.CacheRuleService, cacheService *servi
 }
 
 func (h *CacheRuleHandler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	var req models.CreateCacheRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
 
-	rule, err := h.service.Create(r.Context(), &req)
+	rule, err := h.service.Create(r.Context(), userID, &req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create cache rule"}`, http.StatusInternalServerError)
 		return
@@ -41,7 +48,13 @@ func (h *CacheRuleHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CacheRuleHandler) List(w http.ResponseWriter, r *http.Request) {
-	rules, err := h.service.List(r.Context())
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	rules, err := h.service.List(r.Context(), userID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list cache rules"}`, http.StatusInternalServerError)
 		return
@@ -52,6 +65,12 @@ func (h *CacheRuleHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CacheRuleHandler) Update(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -68,7 +87,7 @@ func (h *CacheRuleHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule, err := h.service.Update(r.Context(), id, req.TTLSeconds, req.Enabled)
+	rule, err := h.service.Update(r.Context(), userID, id, req.TTLSeconds, req.Enabled)
 	if err != nil {
 		http.Error(w, `{"error":"failed to update cache rule"}`, http.StatusInternalServerError)
 		return
@@ -79,6 +98,12 @@ func (h *CacheRuleHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CacheRuleHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -86,7 +111,7 @@ func (h *CacheRuleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	if err := h.service.Delete(r.Context(), userID, id); err != nil {
 		http.Error(w, `{"error":"failed to delete cache rule"}`, http.StatusInternalServerError)
 		return
 	}

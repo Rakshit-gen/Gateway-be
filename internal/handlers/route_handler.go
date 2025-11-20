@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"gateway/internal/middleware"
 	"gateway/internal/models"
 	"gateway/internal/services"
 	"net/http"
@@ -19,13 +20,19 @@ func NewRouteHandler(service *services.RouteService) *RouteHandler {
 }
 
 func (h *RouteHandler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	var req models.CreateRouteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
 
-	route, err := h.service.Create(r.Context(), &req)
+	route, err := h.service.Create(r.Context(), userID, &req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create route"}`, http.StatusInternalServerError)
 		return
@@ -37,7 +44,13 @@ func (h *RouteHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RouteHandler) List(w http.ResponseWriter, r *http.Request) {
-	routes, err := h.service.List(r.Context())
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	routes, err := h.service.List(r.Context(), userID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list routes"}`, http.StatusInternalServerError)
 		return
@@ -48,6 +61,12 @@ func (h *RouteHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RouteHandler) Get(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -55,7 +74,7 @@ func (h *RouteHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route, err := h.service.GetByID(r.Context(), id)
+	route, err := h.service.GetByID(r.Context(), userID, id)
 	if err != nil {
 		http.Error(w, `{"error":"route not found"}`, http.StatusNotFound)
 		return
@@ -66,6 +85,12 @@ func (h *RouteHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RouteHandler) Update(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -79,7 +104,7 @@ func (h *RouteHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route, err := h.service.Update(r.Context(), id, &req)
+	route, err := h.service.Update(r.Context(), userID, id, &req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to update route"}`, http.StatusInternalServerError)
 		return
@@ -90,6 +115,12 @@ func (h *RouteHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RouteHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -97,7 +128,7 @@ func (h *RouteHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	if err := h.service.Delete(r.Context(), userID, id); err != nil {
 		http.Error(w, `{"error":"failed to delete route"}`, http.StatusInternalServerError)
 		return
 	}

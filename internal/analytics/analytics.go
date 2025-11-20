@@ -67,9 +67,9 @@ func (a *Analytics) flushEvents(ctx context.Context, events []*models.AnalyticsE
 	for _, event := range events {
 		batch.Queue(
 			`INSERT INTO analytics_events 
-			(timestamp, route_id, api_key_id, status_code, latency_ms, cache_hit, ip_address)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			event.Timestamp, event.RouteID, event.APIKeyID,
+			(timestamp, route_id, api_key_id, user_id, status_code, latency_ms, cache_hit, ip_address)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			event.Timestamp, event.RouteID, event.APIKeyID, event.UserID,
 			event.StatusCode, event.LatencyMs, event.CacheHit, event.IPAddress,
 		)
 	}
@@ -85,7 +85,7 @@ func (a *Analytics) flushEvents(ctx context.Context, events []*models.AnalyticsE
 	}
 }
 
-func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time) (*models.AnalyticsMetrics, error) {
+func (a *Analytics) GetMetrics(ctx context.Context, userID string, startTime, endTime time.Time) (*models.AnalyticsMetrics, error) {
 	metrics := &models.AnalyticsMetrics{}
 
 	var totalRequests, cacheHits, errors int64
@@ -96,8 +96,8 @@ func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time
 			COUNT(*) FILTER (WHERE cache_hit = true) as cache_hits,
 			COUNT(*) FILTER (WHERE status_code >= 400) as errors
 		 FROM analytics_events 
-		 WHERE timestamp >= $1 AND timestamp <= $2`,
-		startTime, endTime,
+		 WHERE timestamp >= $1 AND timestamp <= $2 AND user_id = $3`,
+		startTime, endTime, userID,
 	).Scan(&totalRequests, &cacheHits, &errors)
 
 	if err != nil {
@@ -118,8 +118,8 @@ func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time
 			PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) as p95,
 			PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms) as p99
 		 FROM analytics_events 
-		 WHERE timestamp >= $1 AND timestamp <= $2`,
-		startTime, endTime,
+		 WHERE timestamp >= $1 AND timestamp <= $2 AND user_id = $3`,
+		startTime, endTime, userID,
 	).Scan(&p50, &p95, &p99)
 
 	if err == nil && p50 != nil {
@@ -134,11 +134,11 @@ func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time
 			DATE_TRUNC('minute', timestamp) as minute,
 			COUNT(*) as count
 		 FROM analytics_events 
-		 WHERE timestamp >= $1 AND timestamp <= $2
+		 WHERE timestamp >= $1 AND timestamp <= $2 AND user_id = $3
 		 GROUP BY minute
 		 ORDER BY minute DESC
 		 LIMIT 60`,
-		startTime, endTime,
+		startTime, endTime, userID,
 	)
 	if err == nil {
 		defer rows.Close()
@@ -159,11 +159,11 @@ func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time
 			COUNT(*) FILTER (WHERE ae.status_code >= 400)::float / COUNT(*)::float as error_rate
 		 FROM analytics_events ae
 		 LEFT JOIN routes r ON ae.route_id = r.id
-		 WHERE ae.timestamp >= $1 AND ae.timestamp <= $2 AND r.path IS NOT NULL
+		 WHERE ae.timestamp >= $1 AND ae.timestamp <= $2 AND ae.user_id = $3 AND r.path IS NOT NULL AND r.user_id = $3
 		 GROUP BY r.path
 		 ORDER BY request_count DESC
 		 LIMIT 10`,
-		startTime, endTime,
+		startTime, endTime, userID,
 	)
 	if err == nil {
 		defer endpointRows.Close()
@@ -178,8 +178,8 @@ func (a *Analytics) GetMetrics(ctx context.Context, startTime, endTime time.Time
 	return metrics, nil
 }
 
-func (a *Analytics) GetRealtimeMetrics(ctx context.Context) (*models.AnalyticsMetrics, error) {
+func (a *Analytics) GetRealtimeMetrics(ctx context.Context, userID string) (*models.AnalyticsMetrics, error) {
 	now := time.Now()
 	startTime := now.Add(-5 * time.Minute)
-	return a.GetMetrics(ctx, startTime, now)
+	return a.GetMetrics(ctx, userID, startTime, now)
 }

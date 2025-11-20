@@ -16,6 +16,7 @@ type Config struct {
 	RedisURL     string
 	RedisToken   string
 	AllowOrigins []string
+	ClerkJWKSURL string
 }
 
 func Load() *Config {
@@ -25,6 +26,7 @@ func Load() *Config {
 		RedisURL:     getEnv("REDIS_URL", ""),
 		RedisToken:   getEnv("REDIS_TOKEN", ""),
 		AllowOrigins: []string{getEnv("FRONTEND_URL", "http://localhost:3000")},
+		ClerkJWKSURL: getEnv("CLERK_JWKS_URL", ""),
 	}
 }
 

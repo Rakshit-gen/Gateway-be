@@ -81,7 +81,10 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	clerkAuth := middleware.NewClerkAuth(cfg.ClerkJWKSURL)
+
 	r.Route("/admin", func(r chi.Router) {
+		r.Use(clerkAuth.Middleware())
 		r.Post("/routes", routeHandler.Create)
 		r.Get("/routes", routeHandler.List)
 		r.Get("/routes/{id}", routeHandler.Get)

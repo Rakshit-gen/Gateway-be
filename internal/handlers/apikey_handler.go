@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"gateway/internal/middleware"
 	"gateway/internal/models"
 	"gateway/internal/services"
 	"net/http"
@@ -19,13 +20,19 @@ func NewAPIKeyHandler(service *services.APIKeyService) *APIKeyHandler {
 }
 
 func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	var req models.CreateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
 
-	apiKey, err := h.service.Create(r.Context(), &req)
+	apiKey, err := h.service.Create(r.Context(), userID, &req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create API key"}`, http.StatusInternalServerError)
 		return
@@ -37,7 +44,13 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
-	keys, err := h.service.List(r.Context())
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	keys, err := h.service.List(r.Context(), userID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list API keys"}`, http.StatusInternalServerError)
 		return
@@ -48,6 +61,12 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -55,7 +74,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Revoke(r.Context(), id); err != nil {
+	if err := h.service.Revoke(r.Context(), userID, id); err != nil {
 		http.Error(w, `{"error":"failed to revoke API key"}`, http.StatusInternalServerError)
 		return
 	}
@@ -64,6 +83,12 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIKeyHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(string)
+	if !ok || userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -71,7 +96,7 @@ func (h *APIKeyHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	if err := h.service.Delete(r.Context(), userID, id); err != nil {
 		http.Error(w, `{"error":"failed to delete API key"}`, http.StatusInternalServerError)
 		return
 	}
